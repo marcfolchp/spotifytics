@@ -1,5 +1,15 @@
-pymongo
+# --- Core libraries ---
+requests
 python-dotenv
-hashlib
-uuid
-datetime
+pandas
+spotipy
+Flask
+
+# --- MongoDB ---
+pymongo
+
+# --- For scheduling or automation (optional but useful) ---
+schedule
+
+# --- For compatibility on GitHub Actions ---
+certifi
