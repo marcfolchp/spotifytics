@@ -72,6 +72,25 @@ def get_refresh_token_from_mongo(user_id: str) -> str:
     
     return user["refresh_token"]
 
+def get_user_info(user_id: str) -> dict:
+    """
+    Fetch detailed Spotify user profile information for a given user_id.
+    Automatically refreshes the access token if necessary.
+    Returns a dictionary with user data (display_name, followers, country, etc.).
+    """
+    # Get a valid access token (refresh if needed)
+    access_token = get_access_token_from_refresh(user_id)
+
+    # Spotify "Get Current User's Profile" endpoint
+    url = "https://api.spotify.com/v1/me"
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    data = response.json()
+
+    return data
+
 def get_access_token_from_refresh(user_id: str) -> str:
     """
     Use a user's refresh token (from MongoDB) to get a new access token.
@@ -92,14 +111,28 @@ def get_access_token_from_refresh(user_id: str) -> str:
     data = response.json()
 
     access_token = data["access_token"]
-    expires_in = data.get("expires_in", 3600)
-    expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
 
-    # Update MongoDB with the new access token + expiry
-    users.update_one(
-        {"_id": user_id},
-        {"$set": {"access_token": access_token, "expires_at": expires_at}}
-    )
+    user_info = get_user_info(user_id)
+
+    # --- Build update document for MongoDB ---
+    update_data = {
+        "access_token": access_token,
+        "display_name": user_info.get("display_name"),
+        "country": user_info.get("country"),
+        "email": user_info.get("email"),
+        "followers": user_info.get("followers", {}).get("total") if user_info.get("followers") else None,
+        "product": user_info.get("product"),  # e.g., 'premium' or 'free'
+        "profile_image": (
+            user_info["images"][0]["url"]
+            if user_info.get("images") and len(user_info["images"]) > 0
+            else None
+        ),
+        "last_profile_sync": datetime.utcnow(),
+        "refresh_token": refresh_token
+    }
+
+    # --- Update MongoDB document ---
+    users.update_one({"_id": user_id}, {"$set": update_data}, upsert=True)
 
     return access_token
 
