@@ -6,7 +6,7 @@ import os
 from collections import defaultdict, Counter
 from flask import jsonify
 from dotenv import load_dotenv
-from functions import store_user_tokens
+from functions import store_user_data  
 
 # ---- CONFIG ----
 load_dotenv()
@@ -64,10 +64,7 @@ def callback():
     user_id = user["id"]
 
     # ✅ Store or update tokens in MongoDB
-    store_user_tokens(
-        user_id=user_id,
-        refresh_token=refresh_token,
-    )
+    store_user_data(user_id, refresh_token)
 
     # --- Save minimal info in Flask session ---
     session["token_info"] = token_info
@@ -280,4 +277,4 @@ def create_playlist(time_range):
         return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8080)
+    app.run(debug=True, port=8080, use_reloader=False)
