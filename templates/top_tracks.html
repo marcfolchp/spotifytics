@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Your Top Tracks</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+
+    /* ---- FILTER BUTTONS ---- */
+    .filter-btn {
+      border: 1px solid #555;
+      color: #d1d1d1;
+      background: transparent;
+      transition: all 0.2s ease;
+    }
+
+    .filter-btn:hover:not(.active) {
+      border-color: #1DB954;
+      color: #1DB954;
+    }
+
+    .filter-btn.active {
+      background-color: #1DB954;
+      border-color: #1DB954;
+      color: #000;
+    }
+
+    .filter-btn.active:hover {
+      background-color: #1DB954;
+      border-color: #1DB954;
+      color: #000;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-gradient-to-b from-[#121212] to-[#000000] text-white">
+
+<!-- NAVBAR -->
+<nav class="bg-[#181818]/90 backdrop-blur-md fixed top-0 left-0 w-full z-50 border-b border-[#282828]">
+  <div class="relative max-w-6xl mx-auto px-6 py-5 flex items-center justify-center">
+
+    <!-- CENTERED NAV LINKS -->
+    <div class="flex space-x-14 text-base font-medium">
+      <a href="{{ url_for('top_tracks') }}" 
+         class="transition-colors hover:text-[#1DB954] {% if request.path == '/top-tracks' %}text-[#1DB954]{% else %}text-gray-300{% endif %}">
+         Top Tracks
+      </a>
+      <a href="{{ url_for('top_artists') }}" 
+         class="transition-colors hover:text-[#1DB954] {% if request.path == '/top-artists' %}text-[#1DB954]{% else %}text-gray-300{% endif %}">
+         Top Artists
+      </a>
+      <a href="{{ url_for('top_genres') }}" 
+         class="transition-colors hover:text-[#1DB954] {% if request.path == '/top-genres' %}text-[#1DB954]{% else %}text-gray-300{% endif %}">
+         Top Genres
+      </a>
+      <a href="{{ url_for('recently_played') }}" 
+         class="transition-colors hover:text-[#1DB954] {% if request.path == '/recently-played' %}text-[#1DB954]{% else %}text-gray-300{% endif %}">
+         Recently Played
+      </a>
+    </div>
+
+    <!-- PROFILE DROPDOWN -->
+    <div class="absolute right-6">
+      <div class="relative">
+        <button id="profileButton" class="flex items-center space-x-2 focus:outline-none group">
+          {% if session.get('user') and session['user']['image'] %}
+            <img src="{{ session['user']['image'] }}" alt="Profile" class="w-9 h-9 rounded-full border border-[#2a2a2a] group-hover:border-[#1DB954] transition">
+          {% else %}
+            <div class="w-9 h-9 rounded-full bg-gray-600 flex items-center justify-center text-sm text-white font-semibold group-hover:bg-[#1DB954] transition">
+              {{ session['user']['name'][0]|upper if session.get('user') else 'U' }}
+            </div>
+          {% endif %}
+          <svg class="w-4 h-4 text-gray-400 group-hover:text-[#1DB954] transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+
+        <!-- Dropdown -->
+        <div id="dropdownMenu" 
+             class="hidden absolute right-0 mt-2 w-40 bg-[#1e1e1e]/95 border border-[#282828] rounded-xl shadow-lg py-1 text-sm text-gray-300">
+          <a href="{{ url_for('logout') }}" 
+             class="block px-4 py-2 rounded-lg transition-colors duration-200 text-gray-300 hover:text-[#1DB954] hover:bg-[#242424]">
+             Log out
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- CONTENT -->
+<main class="pt-24 flex flex-col items-center">
+
+  <!-- TIME RANGE FILTER BUTTONS -->
+  <div class="flex justify-center space-x-6 mb-6">
+    <button onclick="loadTracks('short_term')" id="btn-short" class="filter-btn active px-5 py-2 rounded-full text-sm">Last 4 Weeks</button>
+    <button onclick="loadTracks('medium_term')" id="btn-medium" class="filter-btn px-5 py-2 rounded-full text-sm">Last 6 Months</button>
+    <button onclick="loadTracks('long_term')" id="btn-long" class="filter-btn px-5 py-2 rounded-full text-sm">Last 12 Months</button>
+  </div>
+
+  <!-- CREATE PLAYLIST BUTTON -->
+  <div class="flex flex-col items-center mt-8 mb-10 space-y-4">
+    <button id="createPlaylistBtn"
+            onclick="createPlaylist()"
+            class="bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold px-8 py-3 rounded-full text-sm transition-all shadow-lg hover:shadow-[#1DB954]/30">
+      Create Playlist
+    </button>
+
+    <!-- Success message -->
+    <div id="playlistMessage" class="hidden flex items-center text-sm text-gray-300 space-x-2">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+           stroke-width="2" stroke="#1DB954" class="w-5 h-5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+      <p>
+        Playlist created:
+        <a id="playlistLink"
+           href="#"
+           target="_blank"
+           class="text-[#1DB954] hover:underline font-medium"></a>
+      </p>
+    </div>
+
+    <!-- Error message -->
+    <div id="errorMessage" class="hidden flex items-center text-sm text-red-400 space-x-2">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+           stroke-width="2" stroke="#f87171" class="w-5 h-5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M12 19a7 7 0 100-14 7 7 0 000 14z" />
+      </svg>
+      <p id="errorText">An error occurred while creating the playlist.</p>
+    </div>
+  </div>
+
+  <!-- TRACK LIST -->
+  <div id="tracks-list" class="w-full max-w-3xl space-y-4 px-4 pb-24">
+    {% for track in tracks %}
+      <div class="flex items-center bg-[#1e1e1e] rounded-2xl p-4 shadow-lg hover:bg-[#282828] transition transform hover:scale-[1.02] duration-200">
+        <div class="w-10 text-center text-gray-400 text-base font-medium">{{ loop.index }}</div>
+        {% if track.image %}
+          <img src="{{ track.image }}" alt="Album cover" class="w-24 h-24 rounded-lg mx-4">
+        {% endif %}
+        <div class="flex-1 text-left">
+          <h2 class="text-base font-medium text-white">{{ track.name }}</h2>
+          <p class="text-sm text-gray-400">{{ track.artist }}</p>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+</main>
+
+<!-- SCRIPT -->
+<script>
+const profileButton = document.getElementById("profileButton");
+const dropdownMenu = document.getElementById("dropdownMenu");
+
+document.addEventListener("click", (e) => {
+  if (profileButton.contains(e.target)) {
+    dropdownMenu.classList.toggle("hidden");
+  } else {
+    dropdownMenu.classList.add("hidden");
+  }
+});
+
+async function loadTracks(range) {
+
+    // Hide playlist messages when switching time ranges
+  document.getElementById("playlistMessage").classList.add("hidden");
+  document.getElementById("errorMessage").classList.add("hidden");
+
+  document.querySelectorAll(".filter-btn").forEach(btn => btn.classList.remove("active"));
+  document.getElementById(`btn-${range.split('_')[0]}`).classList.add("active");
+
+  const res = await fetch(`/api/top-tracks/${range}`);
+  const data = await res.json();
+
+  const list = document.getElementById("tracks-list");
+  list.innerHTML = "";
+
+  data.tracks.forEach((t, i) => {
+    const trackHTML = `
+      <div class="flex items-center bg-[#1e1e1e] rounded-2xl p-4 shadow-lg hover:bg-[#282828] transition transform hover:scale-[1.02] duration-200">
+        <div class="w-10 text-center text-gray-400 text-base font-medium">${i + 1}</div>
+        ${t.image ? `<img src="${t.image}" alt="Album cover" class="w-24 h-24 rounded-lg mx-4">` : ""}
+        <div class="flex-1 text-left">
+          <h2 class="text-base font-medium text-white">${t.name}</h2>
+          <p class="text-sm text-gray-400">${t.artist}</p>
+        </div>
+      </div>`;
+    list.insertAdjacentHTML("beforeend", trackHTML);
+  });
+}
+
+async function createPlaylist() {
+  const btn = document.getElementById("createPlaylistBtn");
+  const message = document.getElementById("playlistMessage");
+  const error = document.getElementById("errorMessage");
+  const link = document.getElementById("playlistLink");
+
+  message.classList.add("hidden");
+  error.classList.add("hidden");
+  btn.disabled = true;
+  btn.textContent = "Creating...";
+
+  const activeBtn = document.querySelector(".filter-btn.active");
+  const range = activeBtn ? activeBtn.id.replace("btn-", "") + "_term" : "short_term";
+
+  try {
+    const res = await fetch(`/api/create_playlist/${range}`, { method: "POST" });
+    const data = await res.json();
+
+    if (data.success) {
+      link.href = data.playlist_url;
+      link.textContent = data.playlist_name;
+      message.classList.remove("hidden");
+    } else {
+      document.getElementById("errorText").textContent = data.error || "Something went wrong.";
+      error.classList.remove("hidden");
+    }
+  } catch {
+    error.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Create Playlist";
+  }
+}
+</script>
+
+</body>
+</html>
+ 

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Your Top Genres</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+
+    /* ---- FILTER BUTTONS ---- */
+    .filter-btn {
+      border: 1px solid #555;
+      color: #d1d1d1;
+      background: transparent;
+      transition: all 0.2s ease;
+    }
+
+    .filter-btn:hover:not(.active) {
+      border-color: #1DB954;
+      color: #1DB954;
+    }
+
+    .filter-btn.active {
+      background-color: #1DB954;
+      border-color: #1DB954;
+      color: #000;
+    }
+
+    .filter-btn.active:hover {
+      background-color: #1DB954;
+      border-color: #1DB954;
+      color: #000;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-[#121212] to-[#000000] text-white">
+
+<!-- NAVBAR -->
+<nav class="bg-[#181818]/90 backdrop-blur-md fixed top-0 left-0 w-full z-50 border-b border-[#282828]">
+  <div class="relative max-w-6xl mx-auto px-6 py-5 flex items-center justify-center">
+
+    <!-- CENTERED NAV LINKS -->
+    <div class="flex space-x-14 text-base font-medium">
+      <a href="{{ url_for('top_tracks') }}" 
+         class="transition-colors hover:text-[#1DB954] {% if request.path == '/top-tracks' %}text-[#1DB954]{% else %}text-gray-300{% endif %}">
+         Top Tracks
+      </a>
+      <a href="{{ url_for('top_artists') }}" 
+         class="transition-colors hover:text-[#1DB954] {% if request.path == '/top-artists' %}text-[#1DB954]{% else %}text-gray-300{% endif %}">
+         Top Artists
+      </a>
+      <a href="{{ url_for('top_genres') }}" 
+         class="transition-colors hover:text-[#1DB954] {% if request.path == '/top-genres' %}text-[#1DB954]{% else %}text-gray-300{% endif %}">
+         Top Genres
+      </a>
+      <a href="{{ url_for('recently_played') }}" 
+         class="transition-colors hover:text-[#1DB954] {% if request.path == '/recently-played' %}text-[#1DB954]{% else %}text-gray-300{% endif %}">
+         Recently Played
+      </a>
+    </div>
+
+    <!-- PROFILE DROPDOWN -->
+    <div class="absolute right-6">
+      <div class="relative">
+        <button id="profileButton" class="flex items-center space-x-2 focus:outline-none group">
+          {% if session.get('user') and session['user']['image'] %}
+            <img src="{{ session['user']['image'] }}" alt="Profile" class="w-9 h-9 rounded-full border border-[#2a2a2a] group-hover:border-[#1DB954] transition">
+          {% else %}
+            <div class="w-9 h-9 rounded-full bg-gray-600 flex items-center justify-center text-sm text-white font-semibold group-hover:bg-[#1DB954] transition">
+              {{ session['user']['name'][0]|upper if session.get('user') else 'U' }}
+            </div>
+          {% endif %}
+          <svg class="w-4 h-4 text-gray-400 group-hover:text-[#1DB954] transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+
+        <!-- Dropdown -->
+        <div id="dropdownMenu" 
+             class="hidden absolute right-0 mt-2 w-40 bg-[#1e1e1e]/95 border border-[#282828] rounded-xl shadow-lg py-1 text-sm text-gray-300">
+          <a href="{{ url_for('logout') }}" 
+             class="block px-4 py-2 rounded-lg transition-colors duration-200 text-gray-300 hover:text-[#1DB954] hover:bg-[#242424]">
+             Log out
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+
+<!-- CONTENT -->
+<main class="pt-24 flex flex-col items-center">
+
+  <!-- TIME RANGE FILTER BUTTONS -->
+  <div class="flex justify-center space-x-6 mb-10">
+    <a href="{{ url_for('top_genres', range='short_term') }}"
+       class="filter-btn {% if time_range == 'short_term' %}active{% endif %} px-5 py-2 rounded-full text-sm">
+       Last 4 Weeks
+    </a>
+    <a href="{{ url_for('top_genres', range='medium_term') }}"
+       class="filter-btn {% if time_range == 'medium_term' %}active{% endif %} px-5 py-2 rounded-full text-sm">
+       Last 6 Months
+    </a>
+    <a href="{{ url_for('top_genres', range='long_term') }}"
+       class="filter-btn {% if time_range == 'long_term' %}active{% endif %} px-5 py-2 rounded-full text-sm">
+       Last 12 Months
+    </a>
+  </div>
+
+  <!-- GENRE LIST -->
+  <div class="w-full max-w-3xl space-y-4 px-4 pb-24">
+    {% for genre in genres %}
+      <div class="flex items-center bg-[#1e1e1e] rounded-2xl p-6 shadow-lg hover:bg-[#282828] transition transform hover:scale-[1.02] duration-200">
+        <!-- Rank number -->
+        <div class="w-10 text-center text-gray-400 text-base font-medium">
+          {{ loop.index }}
+        </div>
+
+        <!-- Genre Info -->
+        <div class="flex-1 text-left">
+          <div class="flex justify-between items-center mb-3">
+            <h2 class="text-lg font-medium text-white">{{ genre.name | title }}</h2>
+            <p class="text-sm text-gray-400">{{ genre.count }} artist{{ 's' if genre.count > 1 else '' }}</p>
+          </div>
+
+          <!-- Progress bar -->
+          <div class="w-full bg-[#2a2a2a] h-2 rounded-full overflow-hidden">
+            <div class="bg-[#1DB954] h-full rounded-full"
+                 style="width: {{ (genre.count / genres[0].count * 100) | round(1) }}%">
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+</main>
+
+<script>
+const profileButton = document.getElementById("profileButton");
+const dropdownMenu = document.getElementById("dropdownMenu");
+
+// Toggle dropdown & close on outside click
+document.addEventListener("click", (e) => {
+  if (profileButton.contains(e.target)) {
+    dropdownMenu.classList.toggle("hidden");
+  } else {
+    dropdownMenu.classList.add("hidden");
+  }
+});
+</script>
+
+</body>
+</html>
