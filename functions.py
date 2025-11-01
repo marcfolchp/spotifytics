@@ -21,6 +21,7 @@ db = client[MONGO_DB]
 users = db["users"]
 
 # ---- SPOTIFY AUTH FUNCTIONS ----
+
 def exchange_code_for_tokens(auth_code: str):
     """Exchange Spotify authorization code for access + refresh tokens."""
     url = "https://accounts.spotify.com/api/token"
@@ -68,12 +69,9 @@ def store_user_data(user_id: str, refresh_token: str):
     if existing_user:
         if existing_user.get("refresh_token") != refresh_token:
             users.update_one({"_id": user_id}, {"$set": {"refresh_token": refresh_token}})
-            print(f"🔁 Updated refresh token for existing user {user_id}")
         else:
-            print(f"✅ User {user_id} already exists — no update needed")
+            pass
         return
-
-    print(f"🆕 New user detected: fetching Spotify profile for {user_id}")
 
     # Get access token using refresh_token
     token_url = "https://accounts.spotify.com/api/token"
@@ -114,7 +112,6 @@ def store_user_data(user_id: str, refresh_token: str):
     }
 
     users.insert_one(user_doc)
-    print(f"✅ New user {user_id} stored in MongoDB successfully.")
 
 
 def get_refresh_token_from_mongo(user_id: str) -> str:
@@ -122,6 +119,7 @@ def get_refresh_token_from_mongo(user_id: str) -> str:
     user = users.find_one({"_id": user_id}, {"refresh_token": 1})
     if not user or "refresh_token" not in user:
         raise ValueError(f"No refresh token found for user {user_id}")
+    
     return user["refresh_token"]
 
 
@@ -173,6 +171,7 @@ def get_recently_played_tracks(user_id: str):
             "uri": track["uri"],
             "played_at": played_at
         })
+
     return tracks
 
 
@@ -192,10 +191,6 @@ def update_user_history(user_id: str):
             upsert=True
         ))
 
-    if operations:
-        result = collection.bulk_write(operations, ordered=False)
-        print(f"✅ Updated {len(tracks)} tracks for {user_id}")
-
 
 def get_user_history_df(user_id: str) -> pd.DataFrame:
     """Fetch all stored songs for a user and return as DataFrame."""
@@ -207,4 +202,5 @@ def get_user_history_df(user_id: str) -> pd.DataFrame:
     df = pd.DataFrame(docs)
     if "played_at" in df.columns:
         df["played_at"] = pd.to_datetime(df["played_at"])
+
     return df.sort_values("played_at", ascending=False).reset_index(drop=True)
