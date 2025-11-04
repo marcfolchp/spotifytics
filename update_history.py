@@ -14,5 +14,16 @@ db = client[MONGO_DB]
 users = db["users"]
 user_list = [u["_id"] for u in users.find({}, {"_id": 1})]
 
+print("🔁 Connecting to MongoDB...")
+print("MONGO_URI (hidden):", MONGO_URI[:20] + "..." if MONGO_URI else "None")
+print("Database:", MONGO_DB)
+
+try:
+    print("Collections:", db.list_collection_names())
+    print("Users count:", users.count_documents({}))
+except Exception as e:
+    print("❌ MongoDB connection error:", e)
+
+
 for i in user_list:
     update_user_history(i)
