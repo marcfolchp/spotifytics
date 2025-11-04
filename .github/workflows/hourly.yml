@@ -39,5 +39,5 @@ jobs:
           REDIRECT_URI: ${{ secrets.REDIRECT_URI }}
         run: |
           echo "Starting Spotify update job..."
-          python spotifytics/update_history.py || { echo "❌ Script failed"; exit 1; }
+          python update_history.py || { echo "❌ Script failed"; exit 1; }
           echo "✅ Update complete"
