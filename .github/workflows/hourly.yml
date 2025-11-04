@@ -3,7 +3,7 @@ name: Run hourly Spotify update
 on:
   schedule:
     - cron: "0 * * * *"  # every hour
-  workflow_dispatch:     # allow manual trigger too
+  workflow_dispatch:
 
 jobs:
   run-script:
@@ -22,6 +22,14 @@ jobs:
         run: |
           pip install -r requirements.txt
 
+      - name: Debug environment
+        run: |
+          echo "Using DB: $MONGO_DB"
+          echo "Mongo URI length: ${#MONGO_URI}"
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          MONGO_DB: ${{ secrets.MONGO_DB }}
+
       - name: Run the update script
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
@@ -29,4 +37,7 @@ jobs:
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
           REDIRECT_URI: ${{ secrets.REDIRECT_URI }}
-        run: python update_history.py
+        run: |
+          echo "Starting Spotify update job..."
+          python spotifytics/update_history.py || { echo "❌ Script failed"; exit 1; }
+          echo "✅ Update complete"
