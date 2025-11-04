@@ -197,31 +197,18 @@ def update_user_history(user_id: str):
         collection.bulk_write(operations, ordered=False)
 
 
-def update_user_history(user_id: str):
-    """Stores each playback as its own document in 'user-history-flat'."""
+def get_user_history_df(user_id: str) -> pd.DataFrame:
+    """Fetch all stored songs for a user and return as DataFrame."""
     collection = db["user-history"]
-    print(f"🎧 Updating history for user {user_id}...")
+    docs = list(collection.find({"user_id": user_id}, {"_id": 0}))
+    if not docs:
+        print(f"No history found for {user_id}")
+        return pd.DataFrame()
+    df = pd.DataFrame(docs)
+    if "played_at" in df.columns:
+        df["played_at"] = pd.to_datetime(df["played_at"])
 
-    tracks = get_recently_played_tracks(user_id)
-    print(f"Fetched {len(tracks)} recently played tracks for {user_id}")
-
-    if not tracks:
-        print(f"⚠️ No tracks fetched for {user_id} — likely expired token or no listening history.")
-        return
-
-    operations = []
-    for t in tracks:
-        doc_id = f"{user_id}_{t['played_at']}"
-        operations.append(UpdateOne(
-            {"_id": doc_id},
-            {"$setOnInsert": {"user_id": user_id, **t}},
-            upsert=True
-        ))
-
-    if operations:
-        result = collection.bulk_write(operations, ordered=False)
-        print(f"✅ Upserted {len(operations)} new records for {user_id}")
-
+    return df.sort_values("played_at", ascending=False).reset_index(drop=True)
 
 
 def get_total_play_time(user_id: str) -> int:
