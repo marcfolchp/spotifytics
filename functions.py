@@ -5,6 +5,7 @@ from pymongo import MongoClient, UpdateOne
 from dotenv import load_dotenv
 from pymongo.server_api import ServerApi
 import pandas as pd
+import spotipy
 
 # ---- LOAD ENVIRONMENT VARIABLES ----
 load_dotenv()
@@ -169,6 +170,7 @@ def get_recently_played_tracks(user_id: str):
             "album": track["album"]["name"],
             "album_image": track["album"]["images"][0]["url"] if track["album"]["images"] else None,
             "uri": track["uri"],
+            "duration": track["duration_ms"],
             "played_at": played_at
         })
 
@@ -190,6 +192,9 @@ def update_user_history(user_id: str):
             {"$setOnInsert": {"user_id": user_id, **t}},
             upsert=True
         ))
+    
+    if operations:
+        collection.bulk_write(operations, ordered=False)
 
 
 def get_user_history_df(user_id: str) -> pd.DataFrame:
@@ -204,3 +209,123 @@ def get_user_history_df(user_id: str) -> pd.DataFrame:
         df["played_at"] = pd.to_datetime(df["played_at"])
 
     return df.sort_values("played_at", ascending=False).reset_index(drop=True)
+
+
+def get_total_play_time(user_id: str) -> int:
+    """
+    Returns the total playback duration (in milliseconds) for all songs
+    stored in 'user-history' for a given user.
+    If no history exists or 'duration_ms' field is missing, returns 0.
+    """
+    collection = db["user-history"]
+
+    # Use MongoDB aggregation to sum directly in the database
+    pipeline = [
+        {"$match": {"user_id": user_id, "duration": {"$exists": True}}},
+        {"$group": {"_id": None, "total_duration": {"$sum": "$duration"}}}
+    ]
+
+    result = list(collection.aggregate(pipeline))
+    total_ms = result[0]["total_duration"]
+
+    return int(round(total_ms/60000, 0))
+
+
+def get_user_top_artists(user_id: str, time_range: str = "medium_term", limit: int = 50) -> list:
+    """
+    Fetch the user's top Spotify artists for a given time range.
+    Automatically refreshes the access token from MongoDB.
+
+    Args:
+        user_id (str): Spotify user ID (same as stored in MongoDB)
+        time_range (str): One of ['short_term', 'medium_term', 'long_term']
+        limit (int): Number of artists to return (max 50)
+
+    Returns:
+        list[dict]: Each item contains artist info: name, genres, image, followers, popularity, URI
+    """
+
+    # Get a valid access token for the user
+    access_token = get_access_token_from_refresh(user_id)
+
+    # Spotify endpoint
+    url = "https://api.spotify.com/v1/me/top/artists"
+    headers = {"Authorization": f"Bearer {access_token}"}
+    params = {"limit": limit, "time_range": time_range}
+
+    response = requests.get(url, headers=headers, params=params)
+    response.raise_for_status()
+    data = response.json()
+
+    artists = []
+    for artist in data.get("items", []):
+        artists.append({
+            "name": artist.get("name"),
+            "genres": artist.get("genres", []),
+            "followers": artist.get("followers", {}).get("total"),
+            "popularity": artist.get("popularity"),
+            "image": artist["images"][0]["url"] if artist.get("images") else None,
+            "uri": artist.get("uri"),
+        })
+
+    return artists
+
+def get_user_top_tracks(user_id: str, time_range: str = "medium_term", limit: int = 50) -> list:
+    """
+    Fetch the user's top Spotify tracks for a given time range.
+    Automatically refreshes the access token from MongoDB.
+
+    Args:
+        user_id (str): Spotify user ID (same as stored in MongoDB)
+        time_range (str): One of ['short_term', 'medium_term', 'long_term']
+        limit (int): Number of tracks to return (max 50)
+
+    Returns:
+        list[dict]: Each item contains track info: name, artist, album, duration_ms, popularity, URI, and image.
+    """
+
+    # --- Get a valid access token from refresh token ---
+    access_token = get_access_token_from_refresh(user_id)
+
+    # --- Spotify API endpoint ---
+    url = "https://api.spotify.com/v1/me/top/tracks"
+    headers = {"Authorization": f"Bearer {access_token}"}
+    params = {"limit": limit, "time_range": time_range}
+
+    # --- Request data ---
+    response = requests.get(url, headers=headers, params=params)
+    response.raise_for_status()
+    data = response.json()
+
+    # --- Process tracks ---
+    tracks = []
+    for track in data.get("items", []):
+        tracks.append({
+            "name": track.get("name"),
+            "artist": track["artists"][0]["name"] if track.get("artists") else None,
+            "album": track["album"]["name"] if track.get("album") else None,
+            "image": track["album"]["images"][0]["url"] if track["album"].get("images") else None,
+            "duration_ms": track.get("duration_ms"),
+            "popularity": track.get("popularity"),
+            "uri": track.get("uri"),
+        })
+
+    return tracks
+
+
+
+def get_spotify_client(user_id: str):
+    """
+    Always returns a fresh Spotipy client.
+    Refreshes the access token from MongoDB if expired.
+    """
+    try:
+        # Get a fresh access token using refresh token from MongoDB
+        access_token = get_access_token_from_refresh(user_id)
+
+        # Return a clean Spotify client
+        return spotipy.Spotify(auth=access_token)
+
+    except Exception as e:
+        print(f"⚠️ Could not create Spotify client for {user_id}: {e}")
+        raise

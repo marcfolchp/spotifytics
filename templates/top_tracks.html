@@ -43,6 +43,10 @@
 
     <!-- CENTERED NAV LINKS -->
     <div class="flex space-x-14 text-base font-medium">
+      <a href="{{ url_for('general') }}" 
+         class="transition-colors hover:text-[#1DB954] {% if request.path == '/general' %}text-[#1DB954]{% else %}text-gray-300{% endif %}">
+         General
+      </a>
       <a href="{{ url_for('top_tracks') }}" 
          class="transition-colors hover:text-[#1DB954] {% if request.path == '/top-tracks' %}text-[#1DB954]{% else %}text-gray-300{% endif %}">
          Top Tracks

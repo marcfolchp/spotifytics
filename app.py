@@ -6,7 +6,7 @@ import os
 from collections import defaultdict, Counter
 from flask import jsonify
 from dotenv import load_dotenv
-from functions import store_user_data  
+from functions import store_user_data, get_total_play_time, get_user_top_artists, get_user_top_tracks, get_spotify_client
 
 # ---- CONFIG ----
 load_dotenv()
@@ -59,7 +59,7 @@ def callback():
     refresh_token = token_info.get("refresh_token")
 
     # --- Get user profile info from Spotify ---
-    sp = spotipy.Spotify(auth=access_token)
+    sp = get_spotify_client(session["user"]["id"])
     user = sp.current_user()
     user_id = user["id"]
 
@@ -77,6 +77,39 @@ def callback():
     return redirect(url_for("top_tracks"))
 
 
+@app.route("/general")
+def general():
+    token_info = session.get("token_info")
+    if not token_info:
+        return redirect(url_for("home"))
+
+    sp = get_spotify_client(session["user"]["id"])
+    user = sp.current_user()
+    user_id = user["id"]
+
+    total_ms = get_total_play_time(user_id)
+
+    # --- Top track
+    top_tracks = get_user_top_tracks(user_id, time_range="short_term", limit=1)
+    favorite_song = top_tracks[0]["name"]
+    favorite_song_artist = top_tracks[0]["artist"]
+    favorite_song_image = top_tracks[0]["image"]
+
+    # ---- FAVORITE ARTIST ----
+    top_artists = get_user_top_artists(user_id, time_range="short_term", limit=1)
+    favorite_artist = top_artists[0]["name"]
+    favorite_artist_image = top_artists[0]["image"]
+
+    return render_template(
+        "general.html",
+        total_minutes=total_ms,
+        favorite_song=favorite_song,
+        favorite_song_artist=favorite_song_artist,
+        favorite_song_image=favorite_song_image,
+        favorite_artist=favorite_artist,
+        favorite_artist_image=favorite_artist_image
+    )
+
 @app.route("/top-tracks")
 def top_tracks():
 
@@ -84,7 +117,7 @@ def top_tracks():
     if not token_info:
         return redirect(url_for("home"))
     
-    sp = spotipy.Spotify(auth=token_info["access_token"])
+    sp = get_spotify_client(session["user"]["id"])
 
     # --- Get selected time range from URL (default = short_term)
     time_range = request.args.get("range", "short_term")
@@ -110,7 +143,7 @@ def api_top_tracks(time_range):
     token_info = session.get("token_info")
     if not token_info:
         return redirect(url_for("home"))
-    sp = spotipy.Spotify(auth=token_info["access_token"])
+    sp = get_spotify_client(session["user"]["id"])
 
     results = sp.current_user_top_tracks(limit=50, time_range=time_range)
     tracks = [
@@ -129,7 +162,7 @@ def top_artists():
     token_info = session.get("token_info")
     if not token_info:
         return redirect(url_for("home"))
-    sp = spotipy.Spotify(auth=token_info["access_token"])
+    sp = get_spotify_client(session["user"]["id"])
 
     # --- Get selected time range from query string (default: short_term)
     time_range = request.args.get("range", "short_term")
@@ -154,7 +187,7 @@ def top_genres():
     token_info = session.get("token_info")
     if not token_info:
         return redirect(url_for("home"))
-    sp = spotipy.Spotify(auth=token_info["access_token"])
+    sp = get_spotify_client(session["user"]["id"])
     time_range = request.args.get("range", "short_term")
 
     results = sp.current_user_top_artists(limit=50, time_range=time_range)
@@ -181,7 +214,7 @@ def recently_played():
     token_info = session.get("token_info")
     if not token_info:
         return redirect(url_for("home"))
-    sp = spotipy.Spotify(auth=token_info["access_token"])
+    sp = get_spotify_client(session["user"]["id"])
 
     # --- Get the user's recently played tracks (last 20)
     results = sp.current_user_recently_played(limit=50)
@@ -226,7 +259,7 @@ def create_playlist(time_range):
         if not token_info:
             return jsonify({"success": False, "error": "Not authenticated"}), 401
 
-        sp = spotipy.Spotify(auth=token_info["access_token"])
+        sp = get_spotify_client(session["user"]["id"])
 
         # --- Get current user ---
         user = sp.current_user()
