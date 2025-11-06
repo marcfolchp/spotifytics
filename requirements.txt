@@ -4,12 +4,8 @@ python-dotenv
 pandas
 spotipy
 Flask
-
-# --- MongoDB ---
 pymongo
-
-# --- For scheduling or automation (optional but useful) ---
 schedule
-
-# --- For compatibility on GitHub Actions ---
 certifi
+gunicorn==22.0.0
+spotipy==2.25.1
