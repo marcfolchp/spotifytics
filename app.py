@@ -48,25 +48,23 @@ def callback():
         scope=SCOPE,
     )
 
-    # --- Get authorization code from Spotify ---
     code = request.args.get("code")
     if not code:
         return "Missing authorization code", 400
 
-    # --- Exchange code for tokens (SpotifyOAuth handles it) ---
     token_info = sp_oauth.get_access_token(code, check_cache=False)
     access_token = token_info["access_token"]
     refresh_token = token_info.get("refresh_token")
 
-    # --- Get user profile info from Spotify ---
-    sp = get_spotify_client(session["user"]["id"])
+    # ✅ Get user profile using access token directly
+    sp = spotipy.Spotify(auth=access_token)
     user = sp.current_user()
     user_id = user["id"]
 
-    # ✅ Store or update tokens in MongoDB
+    # ✅ Store in MongoDB
     store_user_data(user_id, refresh_token)
 
-    # --- Save minimal info in Flask session ---
+    # ✅ Store in Flask session
     session["token_info"] = token_info
     session["user"] = {
         "id": user_id,

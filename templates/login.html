@@ -3,44 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <title>Spotify Stats - Discover Your Listening Journey</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Inter', sans-serif; }
-    .glow {
-      box-shadow: 0 0 25px rgba(30, 215, 96, 0.3);
-    }
+    .glow { box-shadow: 0 0 30px rgba(30, 215, 96, 0.4); }
   </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-[#121212] to-black text-white relative overflow-hidden">
+<body class="min-h-screen flex flex-col justify-center items-center bg-gradient-to-b from-[#121212] to-black text-white relative overflow-hidden">
 
   <!-- Background glow -->
-  <div class="absolute w-[600px] h-[600px] bg-[#1DB954]/20 rounded-full blur-3xl -z-10 top-1/3 left-1/4"></div>
+  <div class="absolute w-[500px] sm:w-[700px] h-[500px] sm:h-[700px] bg-[#1DB954]/20 rounded-full blur-3xl -z-10 top-1/3 left-1/2 -translate-x-1/2"></div>
 
-  <!-- Content Container -->
-  <div class="flex flex-col md:flex-row items-center justify-between max-w-6xl mx-auto px-6 md:px-12 gap-16">
+  <!-- Main Container -->
+  <div class="flex flex-col-reverse md:flex-row items-center justify-between max-w-6xl mx-auto px-6 md:px-12 gap-12 md:gap-16">
 
     <!-- Left Text Section -->
-    <div class="flex-1 space-y-6 text-center md:text-left">
-      <h1 class="text-5xl font-extrabold leading-tight">
+    <div class="flex-1 text-center md:text-left space-y-6">
+      <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight">
         Spotify Stats<br>
         <span class="text-[#1DB954]">Discover Your<br>Listening Journey</span>
       </h1>
-      <p class="text-gray-400 max-w-md">
-        Unlock insights into your music taste. See your top artists, most streamed tracks, and explore your unique listening habits.
+
+      <p class="text-gray-400 text-sm sm:text-base max-w-md mx-auto md:mx-0">
+        Unlock insights into your music taste — from your top artists and genres to your most streamed tracks. 
+        Understand your listening personality with data-driven precision.
       </p>
 
       <!-- Login Button -->
-      <div class="mt-8">
+      <div class="pt-4">
         <a href="{{ url_for('login') }}"
-           class="inline-flex items-center space-x-3 bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold px-8 py-3 rounded-full transition glow">
+           class="inline-flex items-center justify-center space-x-3 bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold px-10 py-4 rounded-full transition-all duration-200 glow">
           <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="w-6 h-6" viewBox="0 0 496 512">
             <path d="M248 8C111 8 0 119 0 256s111 248 248 248 248-111 248-248S385 8 248 8zM368 367a17 17 0 0 1-23 5c-66-40-148-49-245-28a17 17 0 0 1-7-33c104-23 194-12 267 33a17 17 0 0 1 5 23zm31-62a21 21 0 0 1-28 6c-75-46-190-59-279-32a21 21 0 1 1-12-40c99-30 225-15 309 36a21 21 0 0 1 6 30zm2-65C310 184 177 168 97 194a23 23 0 1 1-13-44c91-28 238-10 326 48a23 23 0 0 1-25 38z"/>
           </svg>
           <span>Connect with Spotify</span>
         </a>
 
-        <p class="text-gray-500 text-xs mt-4">
+        <p class="text-gray-500 text-[11px] sm:text-xs mt-4">
           By connecting, you agree to the 
           <a href="https://www.spotify.com/legal/end-user-agreement/" class="text-[#1DB954] hover:underline">Terms of Service</a> 
           and 
@@ -50,12 +51,17 @@
     </div>
 
     <!-- Right Image Section -->
-    <div class="flex-1 flex justify-center mt-10 md:mt-0">
+    <div class="flex-1 flex justify-center md:justify-end w-full md:w-auto mb-10 md:mb-0">
       <img src="{{ url_for('static', filename='img/spotify-preview.png') }}" 
            alt="Spotify Stats Preview" 
-           class="rounded-2xl shadow-2xl glow w-[400px]">
+           class="rounded-2xl shadow-2xl glow w-[90%] sm:w-[400px] lg:w-[450px] object-cover">
     </div>
   </div>
+
+  <!-- Footer -->
+  <footer class="absolute bottom-4 text-center w-full text-gray-500 text-xs">
+    Built with <span class="text-[#1DB954]">Tailwind CSS</span> • © 2025 Spotify Stats
+  </footer>
 
 </body>
 </html>

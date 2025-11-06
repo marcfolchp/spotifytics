@@ -313,7 +313,6 @@ def get_user_top_tracks(user_id: str, time_range: str = "medium_term", limit: in
     return tracks
 
 
-
 def get_spotify_client(user_id: str):
     """
     Always returns a fresh Spotipy client.
