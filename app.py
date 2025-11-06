@@ -308,4 +308,5 @@ def create_playlist(time_range):
         return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8080, use_reloader=False)
+    # app.run(debug=True, port=8080, use_reloader=False)
+    app.run(host='0.0.0.0', port=10000)
